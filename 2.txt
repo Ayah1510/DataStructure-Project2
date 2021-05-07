@@ -1,0 +1,638 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <malloc.h>
+//the node structure containing multiple data with different types and a pointer to the next element
+struct node{
+    int NumOfShares;
+    int price;
+    char Company[30];
+    char Date[11];
+    struct node* Next;
+};
+
+//the queue structure containing the front,rear, and the size
+struct queue{
+    struct node* front;
+    struct node* rear;
+    int size;
+};
+
+// creating the functions prototypes
+int IsEmpty(struct node* S);
+void Pop(struct node* S);
+void Push(int n,int p, char [],char [], struct node* S);
+void PrintList(struct node* L);
+int IsLast(struct node* p,struct node* L);
+int StackSize(struct node* s);
+
+struct queue* CreateQueue();
+void EnQueue(int n,int p, char [],char [],struct queue *q);
+void DeQueue(struct queue* q);
+void PrintListQueue(struct queue* q);
+
+void Insert(int n,int p, char c[],char d[], struct node *l);
+void PrintLinkedList(struct node*L);
+struct node* CreateSortedList();
+void DeleteList(struct node* L);
+void FIFO(struct node*L);
+void LIFO(struct node*L);
+void buy(struct node*L);
+void StoreShares(struct node*L);
+int IsCompanyExists(struct node *L,char c[]);
+
+int totalGL=0;                                                //initializing a variable for the total gain and loss
+int main()
+{
+    struct node* head= NULL;
+    head=(struct node*)malloc(sizeof(struct node));
+    head->Next=NULL;
+    head=CreateSortedList();                                  //creating the linked list with the data from the text document and sorting it ascendingly depending on the date
+
+    int option;
+    printf(" ------Main Menu------\n");                        //printing the main menu with the options
+    printf("1: Buy new shares\n");
+    printf("2: Sell shares using either principles:\n");
+    printf("\t3: Sell old shares first\n");
+    printf("\t4: Sell new shares first\n");
+    printf("5: Print total gain/loss\n");
+    printf("6: Print the current list of shares\n");
+    printf("7: Exit\n");
+    do{
+        printf("press the number for your option:\n");        //loop to do the options of the user from the menu. It stops only when entering number 7
+        scanf("%d",&option);
+        switch(option){
+            case 1:buy(head);
+                   break;
+            case 2: printf("***please specify which selling principle to follow\n");
+                    break;
+            case 3: FIFO(head);
+                    break;
+            case 4: LIFO(head);
+                    break;
+            case 5: if(totalGL>=0)
+                          printf("the total gain from selling shares is: %d\n",totalGL);
+                      else
+                          printf("the total loss from selling shares is: %d\n",totalGL);
+                      break;
+            case 6: PrintLinkedList(head);
+                    break;
+            case 7: break;
+            default: printf("***please enter only one of the given numbers!\n\n");      //to alert the user to only enter one of the numbers in the menu
+        }
+
+    }while(option!=7);
+
+    StoreShares(head);                                                                 //to store the currently held shares back to the transactions file
+    return 0;
+}
+
+struct node* CreateSortedList(){                                                      //function to create the linked list with the data from the text document and sorting it ascendingly depending on the date
+    struct node* head= NULL;
+    struct node* temp= NULL;
+    struct node* ar= NULL;
+    head=(struct node*)malloc(sizeof(struct node));
+    head->Next=NULL;
+    int i,j,a,shares,price,day,month,year,day2,month2,year2,len=0;
+    char data[50],date[10],d[11],da[11];
+    char company[30];
+
+    FILE *in;                                                                         //pointer of type file; for communication between the file and the program
+    in=fopen("shares.txt","r");                                                       //opening the file with reading mode "r"
+    if(in==NULL)                                                                      //to let the user that reading the file was not successful and to not continue with creating the linked list
+        printf("\t---File not found!\n\n");
+    else{
+        do{                                                                           //to find how many lines in the file by counting the numbers of the new line character'\n'
+            a=getc(in);
+            if(a=='\n')
+            ++len;
+        }while(a!=EOF);
+        ++len;
+        fclose(in);
+        struct node *array[len];
+        for(i=0;i<len;++i){
+             array[i]=(struct node*)malloc(sizeof(struct node));
+             array[i]->Next=NULL;
+        }
+        in=fopen("shares.txt","r");                                             //reopening the file to read the data;because the first time the end of the file has been reached
+        for(i=0;i<len;++i){                                                     //to get the data from the file and save it in the array
+            fgets(data,50,in);
+            strcpy(data,strtok(data,"\n"));
+            shares=atoi(strtok(data,";"));
+            price=atoi(strtok(NULL,";"));
+            strcpy(company,strtok(NULL,";"));
+            strcpy(date,strtok(NULL,";"));
+            Insert(shares,price,company,date,array[i]);
+        }
+        fclose(in);
+        for(i=0;i<len;++i){                                                     //to sort the data depending on the date
+            strcpy(d,array[i]->Next->Date);
+            day=atoi(strtok(d,"-"));                                            //atoi is used for converting from string to integer
+            month=atoi(strtok(NULL,"-"));
+            year=atoi(strtok(NULL,"-"));
+            for(j=i+1;j<len;j++){
+            strcpy(da,array[j]->Next->Date);
+            day2=atoi(strtok(da,"-"));
+            month2=atoi(strtok(NULL,"-"));
+            year2=atoi(strtok(NULL,"-"));
+            if((year>year2)||(year==year2&&month>month2)||(year==year2&&month==month2&&day>day2)){
+                ar=array[i];
+                array[i]=array[j];
+                array[j]=ar;
+                strcpy(d,array[i]->Next->Date);
+                day=atoi(strtok(d,"-"));
+                month=atoi(strtok(NULL,"-"));
+                year=atoi(strtok(NULL,"-"));
+                strcpy(da,array[j]->Next->Date);
+                day2=atoi(strtok(da,"-"));
+                month2=atoi(strtok(NULL,"-"));
+                year2=atoi(strtok(NULL,"-"));
+            }
+            }
+    }
+    for(i=0;i<len;++i){
+           temp=head;
+           while(temp->Next!=NULL)                                                    //to reach the last node; so the insertion will happen at the end of the list
+                 temp=temp->Next;
+           Insert(array[i]->Next->NumOfShares,array[i]->Next->price,array[i]->Next->Company,array[i]->Next->Date,temp);
+    }
+    }
+    return head;
+}
+
+void StoreShares(struct node*L){                                                    //function to store the currently held shares back to the transactions file
+    FILE *in;
+    in=fopen("shares.txt","w");                                                     //opening the file with writing mode "w"
+    struct node* temp= NULL;
+    temp=L;
+    if(in==NULL)
+        printf("\t---File not found!\n\n");
+    else{
+        while(temp->Next!=NULL){
+            temp=temp->Next;
+            fprintf(in,"%d;%d;%s;%s\n",temp->NumOfShares,temp->price,temp->Company,temp->Date);
+        }
+    }
+}
+void buy(struct node*L){                                                 //function to buy new shares and add it at the end of the sorted linked list
+    int n,p,day,month,year,error=0;
+    char c[30],d[11],charac[5];
+    time_t now;
+    time(&now);
+    struct tm *local = localtime(&now);                                  //defining the local time to use it in the date for the new shares and it converts a time value to a broken down local time
+    day=local->tm_mday;
+    month=local->tm_mon +1;                                              // +1 because the month is defined from 0-11, 0 for january
+    year=local->tm_year +1900;                                           //+1900 because tm_year is defined the number of years since 1900
+    itoa(day,charac,10);
+    strcpy(d,charac);
+    strcat(d,"-");
+    itoa(month,charac,10);
+    strcat(d,charac);
+    strcat(d,"-");
+    itoa(year,charac,10);
+    strcat(d,charac);
+    do{                                                                 // loop to repeat asking the user to enter the number of shares if he entered negative number because its not correct for numbers of shares to be negative
+       if (error!=0)
+            printf("wrong entry.\t");
+        printf("please enter the number of shares you would like to purchase\n");
+        scanf("%d",&n);
+        ++error;
+    }while(n<0);
+    error=0;
+    do{                                                                 // loop to repeat asking the user to enter the price if he entered negative number because its not correct for price to be negative
+       if (error!=0)
+          printf("wrong entry.\t");
+       printf("please enter the price per share for the shares you would like to purchase\n");
+       scanf("%d",&p);
+       ++error;
+    }while(p<0);
+    printf("please enter name of the company the shares belongs to\n");
+    fflush(stdin);                                                     //to clear the input buffer
+    fgets(c,30,stdin);
+    strcpy(c,strtok(c,"\n"));                                          //to split the new-line character from the company's name
+    struct node *temp;
+    temp=L;
+    while(temp->Next!=NULL)
+        temp=temp->Next;
+    Insert(n,p,c,d,temp);
+    printf("\t----The buying transaction is successful----\n");
+
+}
+void FIFO(struct node*L){                                               //function to sell old shares first using queues
+    if(L->Next!=NULL){                                                  //the function will not continue if the linked list was empty
+        int NumShares,SellingPrice,error=0;
+        char c[30];
+        do{
+           if (error!=0)
+               printf("wrong entry.\t");
+           printf("Please enter numbers of shares you would like to sell\n");
+           scanf("%d",&NumShares);
+           ++error;
+        }while(NumShares<0);
+        error=0;
+        do{
+           if (error!=0)
+               printf("wrong entry.\t");
+           printf("please enter the price per share for the shares you would like to sell\n");
+           scanf("%d",&SellingPrice);
+           ++error;
+        }while(SellingPrice<0);
+        error=0;
+        do{                                                                 //loop to repeat asking the user to enter a company's name if the first entry was a company's name who he don't have shares for
+           if (error!=0)
+                printf("You don't own shares for the entered company's name.\t");
+           printf("please enter name of the company the shares belongs to\n");
+           fflush(stdin);
+           fgets(c,30,stdin);
+           strcpy(c,strtok(c,"\n"));
+           ++error;
+        }while(IsCompanyExists(L,c)==0);
+
+        struct node *temp=L;
+        struct queue *q=CreateQueue();
+        while(temp->Next!=NULL){                                              //to insert the nodes in the linked list in the queue
+             temp=temp->Next;
+             EnQueue(temp->NumOfShares,temp->price,temp->Company,temp->Date,q);
+        }
+        int i, size=q->size,diff,sum=0,priceDiff,total=0,plus=0;
+        for(i=0;i<size&&q->front!=NULL;++i){                                 //to find the total of all shares for the company who the user want to sell for
+             if(strcmp(q->front->Company,c)==0)
+                 sum+=q->front->NumOfShares;
+             DeQueue(q);
+         }
+         temp=L;
+         q=CreateQueue();
+         while(temp->Next!=NULL){
+              temp=temp->Next;
+              EnQueue(temp->NumOfShares,temp->price,temp->Company,temp->Date,q);
+         }
+         DeleteList(L);
+         if(sum>=NumShares){                                                 //to check if the number of shares the user want to sell is less or equal than what he owns so the selling will be allowed
+              printf("\t----The data entered is confirmed----\n");
+              printf("\t----Selling for %s:\t ",c);
+              for(i=0;i<size&&q->front!=NULL;++i){
+                 if(strcmp(q->front->Company,c)==0){
+                    diff=NumShares-q->front->NumOfShares;
+                    priceDiff=SellingPrice-q->front->price;
+                    if(diff==0){                                               //if number of shares the user want to sell is th same as the number in the node
+                           total+=priceDiff*q->front->NumOfShares;
+                           if(priceDiff>=0)
+                                printf("%d * %d ",q->front->NumOfShares,priceDiff);
+                           else
+                                printf("%d * [%d] ",q->front->NumOfShares,priceDiff);
+                            DeQueue(q);
+                            while(q->front!=NULL){                                 //to insert the rest of the nodes after deleting the one with the share back into the linked list
+                                   temp=L;
+                                   while(temp->Next!=NULL)
+                                          temp=temp->Next;
+                                   Insert(q->front->NumOfShares,q->front->price,q->front->Company,q->front->Date,temp);
+                                   DeQueue(q);
+                                   plus=0;
+                            }
+                    }
+                    else if(diff>0){                                          //if the number of shares the user want to sell is larger than the number on the node, the node will be deleted and the main loop will continue searching for the other nodes for the same comany
+                         total+=priceDiff*q->front->NumOfShares;
+                         if(priceDiff>=0)
+                              printf("%d * %d ",q->front->NumOfShares,priceDiff);
+                         else
+                              printf("%d * [%d] ",q->front->NumOfShares,priceDiff);
+                         NumShares=diff;
+                         DeQueue(q);
+                         plus=1;
+                    }
+                    else if(diff<0){                                         //if the number of shares the user want to sell is less than the number on the node,the node will stay with changing the number of shares
+                         total+=priceDiff*NumShares;
+                         if(priceDiff>=0)
+                             printf("%d * %d ",NumShares,priceDiff);
+                         else
+                             printf("%d * [%d] ",NumShares,priceDiff);
+                         q->front->NumOfShares=abs(diff);
+                         while(q->front!=NULL){
+                               temp=L;
+                               while(temp->Next!=NULL)
+                                     temp=temp->Next;
+                               Insert(q->front->NumOfShares,q->front->price,q->front->Company,q->front->Date,temp);
+                               DeQueue(q);
+                               plus=0;
+                         }
+                    }
+                 }
+                 else{
+                      temp=L;
+                      while(temp->Next!=NULL)
+                          temp=temp->Next;
+                      Insert(q->front->NumOfShares,q->front->price,q->front->Company,q->front->Date,temp);
+                      DeQueue(q);
+                      plus=0;
+                 }
+                 if(plus==1)
+                    printf("+ ");
+             }
+             printf("= %d\n",total);
+         }
+         else{
+             printf("\t----Can't sell; the number of shares to sell is higher than owned!.The owned shares for %s are only %d----\n",c,sum);
+             while(q->front!=NULL){
+                    temp=L;
+                    while(temp->Next!=NULL)
+                         temp=temp->Next;
+                    Insert(q->front->NumOfShares,q->front->price,q->front->Company,q->front->Date,temp);
+                    DeQueue(q);
+            }
+
+        }
+        totalGL+=total;                                                     //to add the total loss/gain from this transaction to variable totalGL
+    }
+    else
+        printf("\t----There are no owned shares, can't sell!----");
+}
+
+void LIFO(struct node*L){                                              //function to sell new shares first using stacks
+    if(L->Next!=NULL){
+        struct node* s;
+        s=(struct node*)malloc(sizeof(struct node));
+        s->Next=NULL;
+        int NumShares,SellingPrice,error=0;
+        char c[30];
+        do{
+           if (error!=0)
+               printf("wrong entry.\t");
+           printf("Please enter numbers of shares you would like to sell\n");
+           scanf("%d",&NumShares);
+           ++error;
+        }while(NumShares<0);
+        error=0;
+        do{
+           if (error!=0)
+               printf("wrong entry.\t");
+           printf("please enter the price per share for the shares you would like to sell\n");
+           scanf("%d",&SellingPrice);
+           ++error;
+        }while(SellingPrice<0);
+        error=0;
+        do{
+           if (error!=0)
+               printf("You don't own shares for the entered company's name.\t");
+           printf("please enter name of the company the shares belongs to\n");
+           fflush(stdin);
+           fgets(c,30,stdin);
+           strcpy(c,strtok(c,"\n"));
+           ++error;
+        }while(IsCompanyExists(L,c)==0);
+        struct node *temp=L;
+        while(temp->Next!=NULL){
+             temp=temp->Next;
+             Push(temp->NumOfShares,temp->price,temp->Company,temp->Date,s);
+        }
+        int i, size=StackSize(s),diff,sum=0,priceDiff,total=0,plus=0;
+        for(i=0;i<size&&s->Next!=NULL;++i){
+             if(strcmp(s->Next->Company,c)==0)
+                 sum+=s->Next->NumOfShares;
+             Pop(s);
+        }
+        temp=L;
+        while(temp->Next!=NULL){
+            temp=temp->Next;
+            Push(temp->NumOfShares,temp->price,temp->Company,temp->Date,s);
+        }
+        DeleteList(L);
+
+        if(sum>=NumShares){
+            printf("\t----The data entered is confirmed.----\n");
+            printf("\t----Selling for %s:\t ",c);
+            for(i=0;i<size&&s->Next!=NULL;++i){
+                 if(strcmp(s->Next->Company,c)==0){
+                      diff=NumShares-s->Next->NumOfShares;
+                      priceDiff=SellingPrice-s->Next->price;
+                      if(diff==0){
+                          total+=priceDiff*s->Next->NumOfShares;
+                          if(priceDiff>=0)
+                               printf("%d * %d ",s->Next->NumOfShares,priceDiff);
+                          else
+                               printf("%d * [%d] ",s->Next->NumOfShares,priceDiff);
+                          Pop(s);
+                          while(s->Next!=NULL){
+                                temp=L;
+                                Insert(s->Next->NumOfShares,s->Next->price,s->Next->Company,s->Next->Date,temp);
+                                Pop(s);
+                                plus=0;
+                          }
+                      }
+                      else if(diff>0){
+                           total+=priceDiff*s->Next->NumOfShares;
+                           if(priceDiff>=0)
+                                printf("%d * %d ",s->Next->NumOfShares,priceDiff);
+                           else
+                                printf("%d * [%d] ",s->Next->NumOfShares,priceDiff);
+                           NumShares=diff;
+                           Pop(s);
+                           plus=1;
+                      }
+                      else if(diff<0){
+                           total+=priceDiff*s->Next->NumOfShares;
+                           if(priceDiff>=0)
+                                printf("%d * %d ",NumShares,priceDiff);
+                           else
+                                printf("%d * [%d] ",NumShares,priceDiff);
+                           s->Next->NumOfShares=abs(diff);
+                           while(s->Next!=NULL){
+                                 temp=L;
+                                 Insert(s->Next->NumOfShares,s->Next->price,s->Next->Company,s->Next->Date,temp);
+                                 Pop(s);
+                                 plus=0;
+                           }
+                     }
+                 }
+                 else{
+                      temp=L;
+                      Insert(s->Next->NumOfShares,s->Next->price,s->Next->Company,s->Next->Date,temp);
+                      Pop(s);
+                      plus=0;
+                 }
+                 if(plus==1)
+                     printf("+ ");
+            }
+            printf("= %d\n",total);
+        }
+        else{
+             printf("\t----Can't sell; the number of shares to sell is higher than owned!. The shares owned for %s are only %d\n----",c,sum);
+             while(s->Next!=NULL){
+                    temp=L;
+                    Insert(s->Next->NumOfShares,s->Next->price,s->Next->Company,s->Next->Date,temp);
+                    Pop(s);
+             }
+
+        }
+        totalGL+=total;
+    }
+    else
+        printf("\t----There are no owned shares, can't sell!----");
+}
+
+int IsCompanyExists(struct node *L,char c[]){             //function to check whether the given company is in the linked list
+    struct node *temp;
+    temp=L;
+    while(temp->Next!=NULL){
+        if(strcmp(c,temp->Company)==0)
+            return 1;
+        temp=temp->Next;
+    }
+    return 0;
+}
+int IsEmpty(struct node* S){                           //function to check if the linked list is empty
+    return S->Next==NULL;
+}
+
+int StackSize(struct node* s){                         //function to calculate the size of the stack
+    struct node* temp=s;
+    int counter=0;
+    while(temp->Next!=NULL){
+        temp=temp->Next;
+        ++counter;
+    }
+    return counter;
+}
+
+void Pop(struct node* S){                             //pop function to delete the first (top) node in the stack
+    struct node* firstCell;
+    if(IsEmpty(S))
+        printf("Empty Stack");
+    else{
+        firstCell=S->Next;
+        S->Next=S->Next->Next;
+        free(firstCell);
+    }
+}
+
+
+void Push(int n,int p, char c[],char d[], struct node* S){     //push function to enter new node at the end of the stack
+    struct node* temp;
+    temp=(struct node*)malloc(sizeof(struct node));
+    if(temp==NULL)
+        printf("Out of space");
+    else{
+        temp->NumOfShares=n;
+        temp->price=p;
+        strcpy(temp->Company,c);
+        strcpy(temp->Date,d);
+        temp->Next=S->Next;
+        S->Next=temp;
+    }
+}
+
+void PrintList(struct node* L){                            //function to print the linked list
+    struct node* p=L;
+    if(IsEmpty(L))
+        printf("Empty List!\n");
+    else
+    do{
+        p=p->Next;
+        printf("Number of shares: %d\t",p->NumOfShares);
+        printf(" Price per share: %d\t",p->price);
+        printf("Company: %s\t",p->Company);
+        printf("Date: %s\n",p->Date);
+    }while (! IsLast(p,L));
+}
+
+int IsLast(struct node* p,struct node* L){              //function to check if the given node is the last node in the linked list
+    return p->Next==NULL;
+}
+
+struct queue* CreateQueue(){                           //function to create new queue
+    struct queue* q;
+    q=(struct queue*)malloc(sizeof(struct queue));
+    q->front=NULL;
+    q->rear=NULL;
+    q->size=0;
+    return q;
+}
+
+void EnQueue(int n,int p, char c[],char d[],struct queue *q){     //enqueue function to add node at the end of the queue
+    struct node *temp;
+    temp=(struct node*)malloc(sizeof(struct node));
+    temp->NumOfShares=n;
+    temp->price=p;
+    strcpy(temp->Company,c);
+    strcpy(temp->Date,d);
+    temp->Next=NULL;
+    if(q->rear==NULL){
+        q->front=temp;
+        q->rear=temp;
+    }
+    else{
+        q->rear->Next=temp;
+        q->rear=temp;
+    }
+    ++q->size;
+
+}
+
+void DeQueue(struct queue* q){                            //dequeue function to delete the node at the end of the queue
+    struct node *temp;
+    temp=q->front;
+    if(q->front==NULL)
+        printf("Empty queue!");
+    else{
+        q->front=q->front->Next;
+        free(temp);
+    }
+}
+
+void PrintListQueue(struct queue* q){                       //function to print the queue
+    struct node*temp;
+    temp=q->front;
+    if(temp==NULL)
+        printf("Empty Queue!\n");
+    else
+    do{
+        printf("Number of shares: %d\t",temp->NumOfShares);
+        printf(" Price per share: %d\t",temp->price);
+        printf("Company: %s\t",temp->Company);
+        printf("Date: %s\n",temp->Date);
+        temp=temp->Next;
+    }while (temp!=q->rear);
+    printf("Number of shares: %d\t",temp->NumOfShares);
+    printf(" Price per share: %d\t",temp->price);
+    printf("Company: %s\t",temp->Company);
+    printf("Date: %s\n",temp->Date);
+
+}
+
+void Insert(int n,int p, char c[],char d[], struct node *l){    //function to insert new node at the end of the linked list
+    struct node* temp;
+    temp=(struct node*)malloc(sizeof(struct node));
+    temp->NumOfShares=n;
+    temp->price=p;
+    strcpy(temp->Company,c);
+    strcpy(temp->Date,d);
+    temp->Next=l->Next;
+    l->Next=temp;
+}
+
+void PrintLinkedList(struct node*L){                           //function to print the linked list
+    struct node*p=L;
+    if(L->Next==NULL)
+        printf("Empty List!\n\n");
+    else
+    do{
+        p=p->Next;
+        printf("Number of shares: %d\t",p->NumOfShares);
+        printf(" Price per share: %d\t",p->price);
+        printf("Company: %s\t",p->Company);
+        printf("Date: %s\n",p->Date);
+    }while (! p->Next==NULL);
+    printf("\n");
+
+}
+
+void DeleteList(struct node* L){                              //function to delete the linked list
+    struct node* p ,*temp;
+    p=L->Next;
+    L->Next=NULL;
+    while(p!= NULL){
+        temp=p->Next;
+        free(p);
+        p=temp;
+    }
+}
